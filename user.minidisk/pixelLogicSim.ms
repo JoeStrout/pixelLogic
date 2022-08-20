@@ -17,7 +17,7 @@ yrange = range(0, maxY)
 // slower than setting tile colors.  Need to test that.)
 clear
 gfx.clear color.black, mapW, mapH
-gfx.drawImage file.loadImage("7SegmentDisplay.png")
+gfx.drawImage file.loadImage("circuits/4bitHexDisplay.png")
 gfx.scale = 6
 //gfx.scrollY = mapH - 640
 
