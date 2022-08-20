@@ -3,9 +3,13 @@
 
 import "mathUtil"
 
+circuitPic = file.loadImage("circuits/cpuDriver.png")
+//circuitPic = file.loadImage("circuits/8bit_cpu.png")
+//circuitPic = file.loadImage("circuits/8bitHexDisplay.png")
+
 // Define the map.
-mapW = 320    // map width
-mapH = 96    // map height
+mapW = circuitPic.width    // map width
+mapH = circuitPic.height    // map height
 
 maxX = mapW-1
 maxY = mapH-1
@@ -19,25 +23,39 @@ yrange = range(0, maxY)
 // slower than setting tile colors.  Need to test that.)
 clear
 gfx.clear color.black, mapW, mapH
-//gfx.drawImage file.loadImage("circuits/BAndNotA.png")
-gfx.drawImage file.loadImage("circuits/8bitHexDisplay.png")
+gfx.drawImage circuitPic
 gfx.scale = 5
 //gfx.scrollY = mapH - 640
+
+coordToNode = {}
 
 // Node: represents a set of pixels that are logically all
 // one unit, i.e., they're all either on or off together.
 Node = {}
-Node.coords = null  // list of [x,y,color] coordinates+colors
+Node.coords = null  // list of [x,y] coordinates
+Node.colors = null	// parallel list of colors
+Node.indices = null	// indexes into coords and colors
 Node.inputs = []  // list of Gates that are inputs to this node
 Node.on = true
+Node.add = function(x, y, fullColor)
+	self.coords.push [x,y]
+	self.colors.push fullColor
+	coordToNode[y * mapW + x] = self
+end function
 Node.draw = function()
-	for p in self.coords
+	if self.indices == null then self.indices = self.coords.indexes
+	for i in self.indices
+		p = self.coords[i]; c = self.colors[i]
 		if self.on then
-			gfx.setPixel p[0], p[1], p[2]
+			gfx.setPixel p[0], p[1], c
 		else
-			gfx.setPixel p[0], p[1], color.lerp(p[2], "#000000", 0.7)
+			gfx.setPixel p[0], p[1], color.lerp(c, "#000000", 0.7)
 		end if
 	end for
+end function
+Node.containsXY = function(x, y)
+	k = y * mapW + x
+	return coordToNode.hasIndex(k) and coordToNode[k] == self
 end function
 Node.setOn = function(nowOn)
 	if nowOn == self.on then return
@@ -58,6 +76,15 @@ Node.update = function
 		self.draw
 	end if
 end function
+
+// Find the node at the given gfx (not screen) coordinates.
+nodeAtXY = function(gfxX, gfxY)
+	k = gfxY * mapW + gfxX
+	if not coordToNode.hasIndex(k) then return null
+	return coordToNode[k]
+end function
+
+
 
 // Gate: a special location on the map where special logic
 // applies.  It's either a crossing (0), or a a NOT
@@ -87,6 +114,7 @@ resetAlpha = function
 				gfx.setPixel x, y, c[:7] + "FF"
 			end if
 		end for
+		print floor(100*y/maxY) + "%"; text.row = text.row+1
 	end for
 end function
 
@@ -95,8 +123,7 @@ end function
 // those pixels into a Node object.
 createNodeAt = function(x,y)
 	node = new Node
-	node.coords = []
-	node.inputs = []
+	node.coords = []; node.colors = []; node.inputs = []
 	toDo = [[x,y]]
 	while toDo
 		pos = toDo.pop
@@ -105,7 +132,8 @@ createNodeAt = function(x,y)
 		if c == "#000000FF" or c[-2:] != "FF" then continue
 		
 		gfx.setPixel x, y, c[:7] + "F0"
-		node.coords.push [x, y, c]
+		node.add x, y, c
+		
 		// push immediate neighbors
 		if x > 0 then toDo.push [x-1, y]
 		if x < maxX then toDo.push [x+1, y]
@@ -153,6 +181,7 @@ findGates = function
 				result.push Gate.make(x, y, 1)
 			end if
 		end for
+		print floor(100*y/maxY) + "%"; text.row = text.row+1
 	end for
 	return result
 end function
@@ -166,10 +195,15 @@ analyze = function
 	// the pixel is full "on".  Then we'll change them to F0
 	// as we go, to keep track of which pixels have already
 	// been assigned to nodes.
+	print "Resetting alpha"
 	resetAlpha
+	
 	// Find all the gates.
+	print "Finding gates"
 	globals.gates = findGates
+	
 	// Create nodes.
+	print "Creating nodes"
 	globals.nodes = []
 	for y in yrange
 		for x in xrange
@@ -181,10 +215,16 @@ analyze = function
 			// print "Got node at " + x + "," + y + " with " + node.coords.len + " pixels"
 			nodes.push node
 		end for
+		print floor(100*y/maxY) + "%"; text.row = text.row+1
 	end for
 	// Then, take out all the crossing gates, and set them back to black.
 	// And for the NOT gates, hook up their inputs and outputs.
+	print "Cleaning up"
 	for i in range(gates.len - 1)
+		if i % 10 == 0 then
+			print (100 - floor(100*i/gates.len)) + "%"
+			text.row = text.row + 1
+		end if
 		g = gates[i]
 		t = g.type
 		if t == 0 then
@@ -206,16 +246,6 @@ analyze = function
 		end if
 		g.output.inputs.push g
 	end for
-end function
-
-// Find the node at the given gfx (not screen) coordinates.
-nodeAtXY = function(gfxX, gfxY)
-	for n in nodes
-		for p in n.coords
-			if p[0] == gfxX and p[1] == gfxY then return n
-		end for
-	end for
-	return null
 end function
 
 scales = [0.1, 0.25, 0.5, 0.75] + range(1,32)
