@@ -1,6 +1,8 @@
 // Bitmap Logic Simulator
 // based on: https://realhet.wordpress.com/2015/09/02/bitmap-logic-simulator/
 
+import "mathUtil"
+
 // Define the map.
 mapW = 320    // map width
 mapH = 96    // map height
@@ -17,8 +19,9 @@ yrange = range(0, maxY)
 // slower than setting tile colors.  Need to test that.)
 clear
 gfx.clear color.black, mapW, mapH
-gfx.drawImage file.loadImage("circuits/4bitHexDisplay.png")
-gfx.scale = 6
+//gfx.drawImage file.loadImage("circuits/BAndNotA.png")
+gfx.drawImage file.loadImage("circuits/8bitHexDisplay.png")
+gfx.scale = 5
 //gfx.scrollY = mapH - 640
 
 // Node: represents a set of pixels that are logically all
@@ -205,18 +208,57 @@ analyze = function
 	end for
 end function
 
-nodeAtXY = function(x, y)
+// Find the node at the given gfx (not screen) coordinates.
+nodeAtXY = function(gfxX, gfxY)
 	for n in nodes
 		for p in n.coords
-			if p[0] == x and p[1] == y then return n
+			if p[0] == gfxX and p[1] == gfxY then return n
 		end for
 	end for
 	return null
 end function
 
+scales = [0.1, 0.25, 0.5, 0.75] + range(1,32)
+scaleIdx = scales.indexOf(gfx.scale)
+if scaleIdx == null then scaleIdx = 4
+
+doZoom = function(clicks)
+	// get position of mouse in the PixelDisplay
+	mx = (mouse.x + gfx.scrollX) / gfx.scale
+	my = (mouse.y + gfx.scrollY) / gfx.scale
+	// adjust the scroll
+	globals.scaleIdx = mathUtil.clamp(scaleIdx + clicks,
+	  0, scales.len-1)
+	gfx.scale = scales[scaleIdx]
+	// adjust scroll so mouse is still over mx, my
+	// (just solve the above for scroll -- yay, algebra!)
+	gfx.scrollX = mx * gfx.scale - mouse.x
+	gfx.scrollY = my * gfx.scale - mouse.y
+end function
+
+dragScroll = function
+	// get position of mouse in the PixelDisplay
+	mx = (mouse.x + gfx.scrollX) / gfx.scale
+	my = (mouse.y + gfx.scrollY) / gfx.scale
+	
+	// while right button down, keep adjusting it
+	// so the mouse is still over mx, my
+	while mouse.button(1)
+		// adjust scroll so mouse is still over mx, my
+		// (just solve the above for scroll -- yay, algebra!)
+		gfx.scrollX = mx * gfx.scale - mouse.x
+		gfx.scrollY = my * gfx.scale - mouse.y
+		yield
+	end while
+end function
+
 handleMouse = function
+	zoom = round(key.axis("Mouse ScrollWheel")*5)
+	if zoom != 0 then doZoom zoom
+	if mouse.button(1) then dragScroll
 	if not mouse.button then return
-	node = nodeAtXY(floor(mouse.x / gfx.scale), floor(mouse.y / gfx.scale))
+	node = nodeAtXY(floor((mouse.x + gfx.scrollX) / gfx.scale), 
+	floor((mouse.y + gfx.scrollY) / gfx.scale))
 	if node != null then
 		node.setOn not node.on
 	end if
