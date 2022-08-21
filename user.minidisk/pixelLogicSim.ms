@@ -3,31 +3,37 @@
 
 import "mathUtil"
 
-circuitPic = file.loadImage("circuits/cpuDriver.png")
+if (not locals.hasIndex("circuitPic") and
+    not globals.hasIndex("circuitPic")) or circuitPic == null then
+	circuitPic = file.loadImage("circuits/cpuDriver.png")
+end if
 //circuitPic = file.loadImage("circuits/8bit_cpu.png")
 //circuitPic = file.loadImage("circuits/8bitHexDisplay.png")
 
-// Define the map.
-mapW = circuitPic.width    // map width
-mapH = circuitPic.height    // map height
-
-maxX = mapW-1
-maxY = mapH-1
-xrange = range(0, maxX)
-yrange = range(0, maxY)
-
-// We'll just draw the map in a Pixel display.  That makes it
-// easy to load and save designs as images, and we can scale
-// or scroll it as needed.
-// (Only drawback to this: setting individual pixels may be
-// slower than setting tile colors.  Need to test that.)
-clear
-gfx.clear color.black, mapW, mapH
-gfx.drawImage circuitPic
-gfx.scale = 5
-//gfx.scrollY = mapH - 640
-
-coordToNode = {}
+setup = function
+	// Define the map.
+	outer.mapW = circuitPic.width    // map width
+	outer.mapH = circuitPic.height    // map height
+	
+	outer.maxX = mapW-1
+	outer.maxY = mapH-1
+	outer.xrange = range(0, maxX)
+	outer.yrange = range(0, maxY)
+	
+	// We'll just draw the map in a Pixel display.  That makes it
+	// easy to load and save designs as images, and we can scale
+	// or scroll it as needed.
+	// (Only drawback to this: setting individual pixels may be
+	// slower than setting tile colors.  Need to test that.)
+	clear
+	gfx.clear color.black, mapW, mapH
+	gfx.drawImage circuitPic
+	gfx.scale = 5
+	
+	outer.coordToNode = {}
+	outer.gates = []
+	outer.nodes = []
+end function
 
 // Node: represents a set of pixels that are logically all
 // one unit, i.e., they're all either on or off together.
@@ -83,7 +89,6 @@ nodeAtXY = function(gfxX, gfxY)
 	if not coordToNode.hasIndex(k) then return null
 	return coordToNode[k]
 end function
-
 
 
 // Gate: a special location on the map where special logic
@@ -200,11 +205,11 @@ analyze = function
 	
 	// Find all the gates.
 	print "Finding gates"
-	globals.gates = findGates
+	outer.gates = findGates
 	
 	// Create nodes.
 	print "Creating nodes"
-	globals.nodes = []
+	outer.nodes = []
 	for y in yrange
 		for x in xrange
 			c = gfx.pixel(x,y)
@@ -246,6 +251,10 @@ analyze = function
 		end if
 		g.output.inputs.push g
 	end for
+	print "Clearing unattached inputs"
+	for n in nodes
+		if not n.inputs then n.setOn false
+	end for
 end function
 
 scales = [0.1, 0.25, 0.5, 0.75] + range(1,32)
@@ -257,8 +266,8 @@ doZoom = function(clicks)
 	mx = (mouse.x + gfx.scrollX) / gfx.scale
 	my = (mouse.y + gfx.scrollY) / gfx.scale
 	// adjust the scroll
-	globals.scaleIdx = mathUtil.clamp(scaleIdx + clicks,
-	  0, scales.len-1)
+	outer.scaleIdx = mathUtil.clamp(scaleIdx + clicks,
+	0, scales.len-1)
 	gfx.scale = scales[scaleIdx]
 	// adjust scroll so mouse is still over mx, my
 	// (just solve the above for scroll -- yay, algebra!)
@@ -304,13 +313,16 @@ simOneStep = function
 	end for
 end function
 
-print "Analyzing..."
-analyze
-print "Ready!"
-wait
-text.clear
-
-while true
-	simOneStep
-	yield
-end while
+if locals == globals then
+	setup
+	print "Analyzing..."
+	analyze
+	print "Ready!"
+	wait
+	text.clear
+	
+	while true
+		simOneStep
+		yield
+	end while
+end if
