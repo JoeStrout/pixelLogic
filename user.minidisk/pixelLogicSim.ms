@@ -4,8 +4,11 @@
 import "mathUtil"
 
 if (not locals.hasIndex("circuitPic") and
-    not globals.hasIndex("circuitPic")) or circuitPic == null then
-	circuitPic = file.loadImage("circuits/cpuDriver.png")
+      not globals.hasIndex("circuitPic")) or circuitPic == null then	
+	  circuitPic = file.loadImage("circuits/current.png")
+	if circuitPic == null then
+		circuitPic = file.loadImage("circuits/cpuDriver.png")
+	end if
 end if
 //circuitPic = file.loadImage("circuits/8bit_cpu.png")
 //circuitPic = file.loadImage("circuits/8bitHexDisplay.png")
