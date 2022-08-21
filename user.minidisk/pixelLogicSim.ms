@@ -41,7 +41,7 @@ Node = {}
 Node.coords = null  // list of [x,y] coordinates
 Node.colors = null	// parallel list of colors
 Node.indices = null	// indexes into coords and colors
-Node.inputs = []  // list of Gates that are inputs to this node
+Node.inputs = []  // list of Nodes that are inputs to this node
 Node.on = true
 Node.add = function(x, y, fullColor)
 	self.coords.push [x,y]
@@ -69,10 +69,11 @@ Node.setOn = function(nowOn)
 	self.draw
 end function
 Node.update = function
-	// Set this node on if ANY of its input gates are on.
+	// Set this node on if ANY of its input nodes are off.
+	if not self.inputs then return
 	setOn = false
-	for g in self.inputs
-		if g.on then
+	for n in self.inputs
+		if not n.on then
 			setOn = true
 			break
 		end if
@@ -251,7 +252,7 @@ analyze = function
 			g.input = nodeAtXY(g.x-1, g.y)
 			g.output = nodeAtXY(g.x+1, g.y)
 		end if
-		g.output.inputs.push g
+		g.output.inputs.push g.input
 	end for
 	print "Clearing unattached inputs"
 	for n in nodes
@@ -306,12 +307,25 @@ handleMouse = function
 	while mouse.button; yield; end while	
 end function
 
+handleKeys = function
+	if not key.available then return
+	k = key.get
+	if k == " " then
+		outer.singleStep = true
+		simOneStep
+	else if k == char(10) then
+		outer.singleStep = false
+	else if k == "+" or k == "=" then
+		doZoom 1
+	else if k == "-" or k == "_" then
+		doZoom -1
+	end if
+end function
+
 simOneStep = function
-	handleMouse
-	gates.shuffle
-	for g in gates
-		g.on = not g.input.on
-		g.output.update
+	nodes.shuffle
+	for n in nodes
+		n.update
 	end for
 end function
 
@@ -322,9 +336,12 @@ if locals == globals then
 	print "Ready!"
 	wait
 	text.clear
+	singleStep = false
 	
 	while true
-		simOneStep
+		handleMouse
+		handleKeys
+		if not singleStep then simOneStep
 		yield
 	end while
 end if
