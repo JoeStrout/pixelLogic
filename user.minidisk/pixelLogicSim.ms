@@ -173,7 +173,9 @@ findGates = function
 			pat = pat.join("")
 			if pat == "000000000" then continue
 			// print pat
-			if pat == "010101010" then  // crossing
+			if pat == "010101010" or pat == "000101010" or
+			 pat == "010001010" or pat == "010100010" or
+			 pat == "010101000"then  // crossing
 				result.push Gate.make(x, y, 0)
 				gfx.setPixel x, y, crossingColor				
 			else if pat == "110101110" then  // NOT (East)
