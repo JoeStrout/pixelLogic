@@ -231,32 +231,34 @@ analyze = function
 	// Then, take out all the crossing gates, and set them back to black.
 	// And for the NOT gates, hook up their inputs and outputs.
 	print "Cleaning up"
-	for i in range(gates.len - 1)
-		if i % 10 == 0 then
-			print (100 - floor(100*i/gates.len)) + "%"
-			text.row = text.row + 1
-		end if
-		g = gates[i]
-		t = g.type
-		if t == 0 then
-			gfx.setPixel g.x, g.y, "#000000FF"
-			gates.remove i
-			continue
-		else if t == 1 then  // NOT from North to South
-			g.input = nodeAtXY(g.x, g.y+1)
-			g.output = nodeAtXY(g.x, g.y-1)
-		else if t == 2 then // NOT from East to West
-			g.input = nodeAtXY(g.x+1, g.y)
-			g.output = nodeAtXY(g.x-1, g.y)
-		else if t == 3 then // NOT from South to North
-			g.input = nodeAtXY(g.x, g.y-1)
-			g.output = nodeAtXY(g.x, g.y+1)
-		else // NOT from West to East
-			g.input = nodeAtXY(g.x-1, g.y)
-			g.output = nodeAtXY(g.x+1, g.y)
-		end if
-		g.output.inputs.push g.input
-	end for
+	if gates.len > 0 then
+		for i in range(gates.len - 1)
+			if i % 10 == 0 then
+				print (100 - floor(100*i/gates.len)) + "%"
+				text.row = text.row + 1
+			end if
+			g = gates[i]
+			t = g.type
+			if t == 0 then
+				gfx.setPixel g.x, g.y, "#000000FF"
+				gates.remove i
+				continue
+			else if t == 1 then  // NOT from North to South
+				g.input = nodeAtXY(g.x, g.y+1)
+				g.output = nodeAtXY(g.x, g.y-1)
+			else if t == 2 then // NOT from East to West
+				g.input = nodeAtXY(g.x+1, g.y)
+				g.output = nodeAtXY(g.x-1, g.y)
+			else if t == 3 then // NOT from South to North
+				g.input = nodeAtXY(g.x, g.y-1)
+				g.output = nodeAtXY(g.x, g.y+1)
+			else // NOT from West to East
+				g.input = nodeAtXY(g.x-1, g.y)
+				g.output = nodeAtXY(g.x+1, g.y)
+			end if
+			g.output.inputs.push g.input
+		end for
+	end if
 	print "Clearing unattached inputs"
 	for n in nodes
 		if not n.inputs then n.setOn false
