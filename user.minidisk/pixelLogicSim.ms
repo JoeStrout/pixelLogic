@@ -3,17 +3,26 @@
 
 import "mathUtil"
 
-if (not locals.hasIndex("circuitPic") and
-      not globals.hasIndex("circuitPic")) or circuitPic == null then	
-	  circuitPic = file.loadImage("circuits/current.png")
-	if circuitPic == null then
-		circuitPic = file.loadImage("circuits/cpuDriver.png")
-	end if
-end if
-//circuitPic = file.loadImage("circuits/8bit_cpu.png")
-//circuitPic = file.loadImage("circuits/8bitHexDisplay.png")
+min = function(a,b)
+	if b < a then return b else return a
+end function
 
-setup = function
+max = function(a,b)
+	if b > a then return b else return a
+end function
+
+filePath = null
+if (not locals.hasIndex("circuitPic") and
+      not globals.hasIndex("circuitPic")) or circuitPic == null then
+    filePath = "/usr/circuits/current.png"
+    if not file.exists(filePath) then
+    	filePath = "/usr/circuits/cpuDriver.png"
+    end if
+	circuitPic = file.loadImage(filePath)
+	fileDate = file.info(filePath).date
+end if
+
+setup = function(keepView=false)
 	// Define the map.
 	outer.mapW = circuitPic.width    // map width
 	outer.mapH = circuitPic.height    // map height
@@ -31,7 +40,11 @@ setup = function
 	clear
 	gfx.clear color.black, mapW, mapH
 	gfx.drawImage circuitPic
-	gfx.scale = 5
+	if not keepView then
+		gfx.scale = max(1, floor(min(960/mapW, 640/mapH)))
+		gfx.scrollX = 480-mapW*gfx.scale/2
+		gfx.scrollY = 320-mapH*gfx.scale/2
+	end if
 	
 	outer.coordToNode = {}
 	outer.gates = []
@@ -334,6 +347,18 @@ simOneStep = function
 	end for
 end function
 
+nextCheckTime = time + 1
+checkAutoReload = function
+	if not filePath then return
+	if file.info(filePath).date == fileDate then return
+	outer.circuitPic = file.loadImage(filePath)
+	outer.fileDate = file.info(filePath).date
+	setup false
+	analyze
+	text.clear
+	outer.nextCheckTime = time + 1
+end function
+
 if locals == globals then
 	setup
 	print "Analyzing..."
@@ -348,5 +373,6 @@ if locals == globals then
 		handleKeys
 		if not singleStep then simOneStep
 		yield
+		if time > nextCheckTime then checkAutoReload
 	end while
 end if
