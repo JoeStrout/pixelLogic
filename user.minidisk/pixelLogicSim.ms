@@ -61,21 +61,41 @@ Node.indices = null	// indexes into coords and colors
 Node.inputs = null	// list of Nodes that are inputs to this node
 Node.outputs = null	// list of Nodes that are outputs to this node
 Node.on = true
+Node.image = null	// image of the node path with transparent background
+Node.imageX = 0
+Node.imageY = 0
 Node.add = function(x, y, fullColor)
 	self.coords.push [x,y]
 	self.colors.push fullColor
 	coordToNode[y * mapW + x] = self
 end function
-Node.draw = function()
+Node.prepImage = function
+	display(7).mode = displayMode.pixel
+	g = display(7)
+	g.clear color.clear, mapW, mapH
 	if self.indices == null then self.indices = self.coords.indexes
+	minX = self.indices[0][0]; maxX = minX
+	minY = self.indices[0][1]; maxY = minY
 	for i in self.indices
-		p = self.coords[i]; c = self.colors[i]
-		if self.on then
-			gfx.setPixel p[0], p[1], c
-		else
-			gfx.setPixel p[0], p[1], color.lerp(c, "#000000", 0.7)
-		end if
+		p = self.coords[i]; x = p[0]; y = p[1]
+		g.setPixel x, y, self.colors[i]
+		if x < minX then minX = x
+		if x > maxX then maxX = x
+		if y < minY then minY = y
+		if y > maxY then maxY = y
 	end for
+	self.image = g.getImage(minX, minY, maxX-minX+1, maxY-minY+1)
+	self.imageX = minX
+	self.imageY = minY
+end function
+Node.draw = function
+	if not self.image then self.prepImage
+	if self.on then
+		gfx.drawImage self.image, self.imageX, self.imageY
+	else
+		gfx.drawImage self.image, self.imageX, self.imageY,
+		  -1, -1, 0, 0, -1, -1, "#444444"
+	end if
 end function
 Node.containsXY = function(x, y)
 	k = y * mapW + x
