@@ -19,3 +19,12 @@
 - Full Adder: add three bits, producing a 2-digit output.  Solution uses Half Adder.
 - 2-to-1 Multiplexer: uses a Select input to choose which other input (A or B) is routed to the output (Z).
 - NAND Latch: first introduction to sequential (stateful) circuits.  Two inputs, S and R; a brief S-low latches the output on, and a brief R-low latches it off.
+
+## Peripherals
+
+We are toying with the idea of adding some peripherals that can be controlled via pins on the edge of the board.  These would be optional in the sandbox, and present only on certain exercises.
+
+- **Speaker**: 8 pins select the note (pitch); 3 pins select the tone (waveform).
+- **Text Display**: interface like a RAM bank: data bus, address register, and read/write signal pins.  Address could be treated as row (4 bits) and column (5 bits) for a 32x16 display.
+- **Pixel Display**: as above, but data is only 4 bits (selecting from a 16-color palette), and address can be treated as X (8 bits) and Y (7 bits) for a 256x128 display.
+- **Sprite Display**: not sure of the interface here.  Would love something simpler than a bank of magic RAM, but it's hard to do without requiring a ton of pins.
