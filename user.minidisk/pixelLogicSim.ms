@@ -192,7 +192,8 @@ findGates = function
 			pat = []
 			for j in range(y-1, y+1)
 				for i in range(x-1, x+1)
-					if gfx.pixel(i,j) == "#000000FF" then pat.push "0" else pat.push "1"
+					c = gfx.pixel(i,j)
+					if c == "#000000FF" or c == crossingColor then pat.push "0" else pat.push "1"
 				end for				
 			end for
 			pat = pat.join("")
