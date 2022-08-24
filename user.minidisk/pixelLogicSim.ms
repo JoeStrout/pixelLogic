@@ -49,6 +49,7 @@ setup = function(keepView=false)
 	outer.coordToNode = {}
 	outer.gates = []
 	outer.nodes = []
+	outer.toDo = []		// list of Nodes that need updating
 end function
 
 // Node: represents a set of pixels that are logically all
@@ -57,7 +58,8 @@ Node = {}
 Node.coords = null  // list of [x,y] coordinates
 Node.colors = null	// parallel list of colors
 Node.indices = null	// indexes into coords and colors
-Node.inputs = []  // list of Nodes that are inputs to this node
+Node.inputs = null	// list of Nodes that are inputs to this node
+Node.outputs = null	// list of Nodes that are outputs to this node
 Node.on = true
 Node.add = function(x, y, fullColor)
 	self.coords.push [x,y]
@@ -83,6 +85,9 @@ Node.setOn = function(nowOn)
 	if nowOn == self.on then return
 	self.on = nowOn
 	self.draw
+	for n in self.outputs
+		if toDo.indexOf(n) == null then toDo.push n
+	end for
 end function
 Node.update = function
 	// Set this node on if ANY of its input nodes are off.
@@ -97,6 +102,9 @@ Node.update = function
 	if setOn != self.on then
 		self.on = setOn
 		self.draw
+		for n in self.outputs
+			if toDo.indexOf(n) == null then toDo.push n
+		end for
 	end if
 end function
 
@@ -145,7 +153,7 @@ end function
 // those pixels into a Node object.
 createNodeAt = function(x,y)
 	node = new Node
-	node.coords = []; node.colors = []; node.inputs = []
+	node.coords = []; node.colors = []; node.inputs = []; node.outputs = []
 	toDo = [[x,y]]
 	while toDo
 		pos = toDo.pop
@@ -270,12 +278,13 @@ analyze = function
 				g.output = nodeAtXY(g.x+1, g.y)
 			end if
 			g.output.inputs.push g.input
+			g.input.outputs.push g.output
 		end for
 	end if
-	print "Clearing unattached inputs"
 	for n in nodes
-		if not n.inputs then n.setOn false
+		n.setOn false
 	end for
+//	outer.toDo = nodes[:]
 end function
 
 scales = [0.1, 0.25, 0.5, 0.75] + range(1,32)
@@ -341,22 +350,36 @@ handleKeys = function
 end function
 
 simOneStep = function
-	nodes.shuffle
-	for n in nodes
+	stepsLeft = toDo.len
+	//text.row=25; text.column=60; print stepsLeft+"   "
+	while stepsLeft > 0
+		n = toDo.pull
+		stepsLeft = stepsLeft - 1
 		n.update
-	end for
+	end while
 end function
 
 nextCheckTime = time + 1
 checkAutoReload = function
 	if not filePath then return
-	if file.info(filePath).date == fileDate then return
+	info = file.info(filePath)
+	if info == null or info.date == fileDate then return
 	outer.circuitPic = file.loadImage(filePath)
 	outer.fileDate = file.info(filePath).date
 	setup false
 	analyze
 	text.clear
 	outer.nextCheckTime = time + 1
+end function
+
+singleStep = false
+
+update = function
+	handleMouse
+	handleKeys
+	if not singleStep then simOneStep
+	yield
+	if time > nextCheckTime then checkAutoReload
 end function
 
 if locals == globals then
@@ -366,13 +389,8 @@ if locals == globals then
 	print "Ready!"
 	wait
 	text.clear
-	singleStep = false
-	
-	while true
-		handleMouse
-		handleKeys
-		if not singleStep then simOneStep
-		yield
-		if time > nextCheckTime then checkAutoReload
+	while not key.pressed("escape")
+		update
 	end while
+	key.clear
 end if

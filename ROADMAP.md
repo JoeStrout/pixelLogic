@@ -18,3 +18,4 @@
 - Half Adder: add two bits, resulting in a 2-digit output (or Sum and Carry outputs).  Solution uses the XOR gate.
 - Full Adder: add three bits, producing a 2-digit output.  Solution uses Half Adder.
 - 2-to-1 Multiplexer: uses a Select input to choose which other input (A or B) is routed to the output (Z).
+- NAND Latch: first introduction to sequential (stateful) circuits.  Two inputs, S and R; a brief S-low latches the output on, and a brief R-low latches it off.
