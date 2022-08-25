@@ -61,9 +61,7 @@ Node.indices = null	// indexes into coords and colors
 Node.inputs = null	// list of Nodes that are inputs to this node
 Node.outputs = null	// list of Nodes that are outputs to this node
 Node.on = true
-Node.image = null	// image of the node path with transparent background
-Node.imageX = 0
-Node.imageY = 0
+Node.sprite = null	// sprite of the node path with transparent background
 Node.add = function(x, y, fullColor)
 	self.coords.push [x,y]
 	self.colors.push fullColor
@@ -74,8 +72,8 @@ Node.prepImage = function
 	g = display(7)
 	g.clear color.clear, mapW, mapH
 	if self.indices == null then self.indices = self.coords.indexes
-	minX = self.indices[0][0]; maxX = minX
-	minY = self.indices[0][1]; maxY = minY
+	minX = self.coords[0][0]; maxX = minX
+	minY = self.coords[0][1]; maxY = minY
 	for i in self.indices
 		p = self.coords[i]; x = p[0]; y = p[1]
 		g.setPixel x, y, self.colors[i]
@@ -84,17 +82,24 @@ Node.prepImage = function
 		if y < minY then minY = y
 		if y > maxY then maxY = y
 	end for
-	self.image = g.getImage(minX, minY, maxX-minX+1, maxY-minY+1)
-	self.imageX = minX
-	self.imageY = minY
+	self.sprite = new Sprite
+	self.sprite.image = g.getImage(minX, minY, maxX-minX+1, maxY-minY+1)
+	self.sprite.origX = (minX + maxX + 1)/2
+	self.sprite.origY = (minY + maxY + 1)/2
+	self.minX = minX; self.maxX = maxX
+	
+	self.sprite.scale = gfx.scale
+	self.sprite.x = self.sprite.origX * gfx.scale - gfx.scrollX
+	self.sprite.y = self.sprite.origY * gfx.scale - gfx.scrollY
+	display(4).sprites.push self.sprite
+	display(7).mode = displayMode.off
 end function
 Node.draw = function
-	if not self.image then self.prepImage
+	if not self.sprite then self.prepImage
 	if self.on then
-		gfx.drawImage self.image, self.imageX, self.imageY
+		self.sprite.tint = "#FFFFFF"
 	else
-		gfx.drawImage self.image, self.imageX, self.imageY,
-		  -1, -1, 0, 0, -1, -1, "#444444"
+		self.sprite.tint = "#444444"
 	end if
 end function
 Node.containsXY = function(x, y)
@@ -246,8 +251,8 @@ analyze = function
 	// the pixel is full "on".  Then we'll change them to F0
 	// as we go, to keep track of which pixels have already
 	// been assigned to nodes.
-	print "Resetting alpha"
-	resetAlpha
+	//print "Resetting alpha" ...actually, let's don't
+	//resetAlpha				we'll instead just require opaque images for now
 	
 	// Find all the gates.
 	print "Finding gates"
@@ -303,12 +308,22 @@ analyze = function
 	for n in nodes
 		n.setOn false
 	end for
-//	outer.toDo = nodes[:]
+	//	outer.toDo = nodes[:]
 end function
 
 scales = [0.1, 0.25, 0.5, 0.75] + range(1,32)
 scaleIdx = scales.indexOf(gfx.scale)
 if scaleIdx == null then scaleIdx = 4
+
+repositionSprites = function
+	scale = gfx.scale
+	sx = -gfx.scrollX
+	sy = -gfx.scrollY
+	for s in display(4).sprites
+		s.x = s.origX * scale + sx
+		s.y = s.origY * scale + sy
+	end for
+end function
 
 doZoom = function(clicks)
 	// get position of mouse in the PixelDisplay
@@ -322,6 +337,7 @@ doZoom = function(clicks)
 	// (just solve the above for scroll -- yay, algebra!)
 	gfx.scrollX = mx * gfx.scale - mouse.x
 	gfx.scrollY = my * gfx.scale - mouse.y
+	repositionSprites
 end function
 
 dragScroll = function
@@ -336,8 +352,9 @@ dragScroll = function
 		// (just solve the above for scroll -- yay, algebra!)
 		gfx.scrollX = mx * gfx.scale - mouse.x
 		gfx.scrollY = my * gfx.scale - mouse.y
+		repositionSprites
 		yield
-	end while
+	end while	
 end function
 
 handleMouse = function
